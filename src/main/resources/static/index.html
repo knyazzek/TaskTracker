@@ -1,0 +1,76 @@
+<html>
+<head>
+    <title>Chat WebSocket</title>
+    <script type="text/javascript">
+        let stompClient = null;
+
+        function setConnected(connected) {
+            document.getElementById('connect').disabled = connected;
+            document.getElementById('disconnect').disabled = !connected;
+            document.getElementById('conversationDiv').style.visibility
+                = connected ? 'visible' : 'hidden';
+            document.getElementById('response').innerHTML = '';
+        }
+
+        function connect() {
+            const socket = new SockJS('/ws');
+            stompClient = Stomp.over(socket);
+            stompClient.connect({}, function(frame) {
+                setConnected(true);
+                console.log('Connected: ' + frame);
+                stompClient.subscribe('/topic/tasks', function(task) {
+                    showTasks(JSON.parse(task.body));
+                });
+            });
+        }
+
+        function disconnect() {
+            if(stompClient != null) {
+                stompClient.disconnect();
+            }
+            setConnected(false);
+            console.log("Disconnected");
+        }
+
+        function sendMessage() {
+            const id = document.getElementById('id').value;
+            const name = document.getElementById('name').value;
+            const description = document.getElementById('description').value;
+            console.log('sendMessage');
+            stompClient.send("/app/task", {},
+                JSON.stringify({'id':id, 'name':name, 'description':description}));
+        }
+
+        function showTasks(task) {
+            console.log('showTasks');
+            const response = document.getElementById('response');
+            const p = document.createElement('p');
+            p.style.wordWrap = 'break-word';
+            p.appendChild(document.createTextNode(
+                task.id + ": " + task.name + " (" + task.description + ")"));
+            response.appendChild(p);
+        }
+    </script>
+</head>
+<body onload="disconnect()">
+<div>
+    <br />
+    <div>
+        <button id="connect" onclick="connect();">Connect</button>
+        <button id="disconnect" disabled="disabled" onclick="disconnect();">
+            Disconnect
+        </button>
+    </div>
+    <br />
+    <div id="conversationDiv">
+        <input type="number" id="id" placeholder="Write a id..."/>
+        <input type="text" id="name" placeholder="Write a name..."/>
+        <input type="text" id="description" placeholder="Write a desc..."/>
+        <button id="sendMessage" onclick="sendMessage();">Send</button>
+        <p id="response"></p>
+    </div>
+</div>
+<script type="text/javascript" src="sockjs-0.3.4.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.js"></script>
+</body>
+</html>
